@@ -20,6 +20,7 @@ class Article extends Model
         'author_id',
         'image_path',
         'published_at',
+        'image_versions',
     ];
 
     /**
@@ -29,6 +30,7 @@ class Article extends Model
      */
     protected $casts = [
         'published_at' => 'datetime',
+        'image_versions' => 'array',
     ];
 
     /**

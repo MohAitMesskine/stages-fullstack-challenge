@@ -7,13 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageOptimizationService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
     private const ARTICLE_LIST_CACHE_KEY = 'articles.index.optimized.v2';
-    private const ARTICLE_LIST_CACHE_TTL = 3600; // seconds
+    private const ARTICLE_LIST_CACHE_TTL = 60; // seconds (PERF-003: articles list cached 1 minute)
     private const ARTICLE_LIST_LIMIT = 20; // default per_page
     /**
      * Display a listing of articles. 
@@ -196,9 +197,12 @@ class ArticleController extends Controller
 
         // Upload image if present
         $imagePath = null;
+        $imageVersions = null;
         if ($request->hasFile('image')) {
             try {
-                $imagePath = $request->file('image')->store('articles', 'public');
+                $service = new ImageOptimizationService();
+                $imageVersions = $service->optimize($request->file('image'));
+                $imagePath = $imageVersions['original'] ?? null;
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
@@ -213,6 +217,7 @@ class ArticleController extends Controller
             'author_id' => $request->author_id,
             'image_path' => $imagePath,
             'published_at' => now(),
+            'image_versions' => $imageVersions,
         ]);
 
         // Invalider le cache après création
@@ -227,6 +232,7 @@ class ArticleController extends Controller
             'success' => true,
             'data' => $article,
             'image_url' => $imagePath ?  Storage::url($imagePath) : null,
+            'images' => $imageVersions ? array_map(fn($p) => Storage::url($p), $imageVersions) : null,
         ], 201);
     }
 
@@ -264,15 +270,12 @@ class ArticleController extends Controller
         }
 
         try {
-            $path = $request->file('image')->store('articles', 'public');
-            
+            $service = new ImageOptimizationService();
+            $versions = $service->optimize($request->file('image'));
             return response()->json([
                 'success' => true,
-                'message' => 'Image uploadée avec succès (max 2MB)',
-                'path' => $path,
-                'url' => Storage::url($path),
-                'size' => $request->file('image')->getSize(),
-                'size_mb' => round($request->file('image')->getSize() / 1024 / 1024, 2),
+                'message' => 'Image optimisée et variantes générées',
+                'images' => array_map(fn($p) => Storage::url($p), $versions),
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
