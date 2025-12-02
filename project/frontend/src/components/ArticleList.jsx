@@ -22,6 +22,7 @@ function ArticleList({ searchQuery }) {
       let response;
       if (searchQuery && searchQuery.trim() !== '') {
         response = await searchArticles(searchQuery);
+        console.log("data are : ",response)
       } else {
         response = await getArticles(withPerformanceTest);
       }

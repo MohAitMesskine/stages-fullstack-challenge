@@ -64,31 +64,33 @@ class ArticleController extends Controller
     /**
      * Search articles.
      */
-    public function search(Request $request)
-    {
-        $query = $request->input('q');
-
-        if (!$query) {
-            return response()->json([]);
-        }
-
-        // Utilisation de l'Eloquent avec paramètres liés pour éviter les injections SQL
-        // La collation utf8mb4_unicode_ci permet la recherche insensible aux accents
-        $articles = Article::where('title', 'LIKE', '%' . $query . '%')
-            ->orWhere('content', 'LIKE', '%' . $query . '%')
-            ->get();
-
-        $results = $articles->map(function ($article) {
-            return [
-                'id' => $article->id,
-                'title' => $article->title,
-                'content' => substr($article->content, 0, 200),
-                'published_at' => $article->published_at,
-            ];
-        });
-
-        return response()->json($results);
+  /**
+ * Search articles.
+ */
+public function search(Request $request)
+{
+    $query = $request->input('q');
+    
+    if (!$query) {
+        return response()->json([]);
     }
+
+    // Recherche sensible aux accents avec collation utf8mb4_bin
+    $articles = Article::whereRaw('title COLLATE utf8mb4_bin LIKE ?', ['%' . $query . '%'])
+        ->orWhereRaw('content COLLATE utf8mb4_bin LIKE ?', ['%' . $query . '%'])
+        ->get();
+
+    $results = $articles->map(function ($article) {
+        return [
+            'id' => $article->id,
+            'title' => $article->title,
+            'content' => substr($article->content, 0, 200),
+            'published_at' => $article->published_at,
+        ];
+    });
+
+    return response()->json($results);
+}
 
     /**
      * Store a newly created article.
