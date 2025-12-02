@@ -4,36 +4,90 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Cache\TaggableStore;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
+    private const ARTICLE_LIST_CACHE_KEY = 'articles.index.optimized.v2';
+    private const ARTICLE_LIST_CACHE_TTL = 3600; // seconds
+    private const ARTICLE_LIST_LIMIT = 20; // default per_page
     /**
      * Display a listing of articles. 
+     * Version simplifiée pour debug
      */
     public function index(Request $request)
     {
-        $articles = Article::all();
+        $startedAt = microtime(true);
+        $page = max(1, (int) $request->query('page', 1));
+        $perPageReq = (int) $request->query('per_page', self::ARTICLE_LIST_LIMIT);
+        $perPage = max(1, min(50, $perPageReq)); // clamp per_page to [1,50]
+        $offset = ($page - 1) * $perPage;
 
-        $articles = $articles->map(function ($article) use ($request) {
-            if ($request->has('performance_test')) {
-                usleep(30000);
-            }
+        // PERF-001: cache + eager loading to eliminate N+1 overhead.
+        $cacheKey = self::ARTICLE_LIST_CACHE_KEY . ":p={$page}:pp={$perPage}";
+        $cacheStore = Cache::getStore();
+        $supportsTags = $cacheStore instanceof TaggableStore;
 
-            return [
-                'id' => $article->id,
-                'title' => $article->title,
-                'content' => substr($article->content, 0, 200) .  '...',
-                'author' => $article->author->name,
-                'comments_count' => $article->comments->count(),
-                'published_at' => $article->published_at,
-                'created_at' => $article->created_at,
-                'image_url' => $article->image_path ? Storage::url($article->image_path) : null,
-            ];
-        });
+        $cacheRemember = function () use ($offset, $perPage) {
+                return Article::with(['author:id,name'])
+                    ->withCount('comments')
+                    ->select([
+                        'id',
+                        'title',
+                        'content',
+                        'author_id',
+                        'image_path',
+                        'published_at',
+                        'created_at',
+                    ])
+                    ->orderByDesc('published_at')
+                    ->orderByDesc('created_at')
+                    ->skip($offset)
+                    ->take($perPage)
+                    ->get()
+                    ->map(static function (Article $article) {
+                        $content = $article->content ?? '';
 
-        return response()->json($articles);
+                        return [
+                            'id' => $article->id,
+                            'title' => $article->title,
+                            'content' => Str::limit($content, 200, Str::length($content) > 200 ? '...' : ''),
+                            'author' => optional($article->author)->name,
+                            'comments_count' => $article->comments_count,
+                            'published_at' => optional($article->published_at)->toJSON(),
+                            'created_at' => optional($article->created_at)->toJSON(),
+                            'image_url' => $article->image_path ? Storage::url($article->image_path) : null,
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            };
+
+        $articles = $supportsTags
+            ? Cache::tags(['articles_list'])->remember($cacheKey, self::ARTICLE_LIST_CACHE_TTL, $cacheRemember)
+            : Cache::remember($cacheKey, self::ARTICLE_LIST_CACHE_TTL, $cacheRemember);
+
+        // ETag support for client-side caching
+        $payload = json_encode($articles);
+        $etag = 'W/"' . sha1($payload) . '"';
+        if ($request->headers->get('If-None-Match') === $etag) {
+            return response()->noContent(304)->header('ETag', $etag)->header('Cache-Control', 'public, max-age=300');
+        }
+
+        $response = response()->json($articles);
+        $response->headers->set('ETag', $etag);
+        $response->headers->set('Cache-Control', 'public, max-age=300');
+
+        if ($request->boolean('performance_test')) {
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+            $response->headers->set('X-Debug-Response-Time', $durationMs);
+        }
+
+        return $response;
     }
 
     /**
@@ -41,7 +95,7 @@ class ArticleController extends Controller
      */
     public function show($id)
     {
-        $article = Article::with(['author', 'comments. user'])->findOrFail($id);
+        $article = Article::with(['author', 'comments.user'])->findOrFail($id);
 
         return response()->json([
             'id' => $article->id,
@@ -161,6 +215,14 @@ class ArticleController extends Controller
             'published_at' => now(),
         ]);
 
+        // Invalider le cache après création
+        $cacheStore = Cache::getStore();
+        if ($cacheStore instanceof TaggableStore) {
+            Cache::tags(['articles_list'])->flush();
+        } else {
+            Cache::forget(self::ARTICLE_LIST_CACHE_KEY);
+        }
+
         return response()->json([
             'success' => true,
             'data' => $article,
@@ -234,6 +296,14 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
+        // Invalider le cache après modification
+        $cacheStore = Cache::getStore();
+        if ($cacheStore instanceof TaggableStore) {
+            Cache::tags(['articles_list'])->flush();
+        } else {
+            Cache::forget(self::ARTICLE_LIST_CACHE_KEY);
+        }
+
         return response()->json($article);
     }
 
@@ -250,6 +320,14 @@ class ArticleController extends Controller
         }
         
         $article->delete();
+
+        // Invalider le cache après suppression
+        $cacheStore = Cache::getStore();
+        if ($cacheStore instanceof TaggableStore) {
+            Cache::tags(['articles_list'])->flush();
+        } else {
+            Cache::forget(self::ARTICLE_LIST_CACHE_KEY);
+        }
 
         return response()->json(['message' => 'Article deleted successfully']);
     }
