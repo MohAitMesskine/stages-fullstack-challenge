@@ -104,6 +104,7 @@ L’objectif : corriger un maximum de tickets tout en respectant les bonnes prat
 - Conversion WebP (bonus).
 
 <img width="1222" height="478" alt="image" src="https://github.com/user-attachments/assets/f5d09ee8-fffb-4218-aaff-2cb59863100c" />
+<img width="553" height="205" alt="image" src="https://github.com/user-attachments/assets/e6bcac45-5804-47c6-b711-00d0dd3265be" />
 
 ---
 
