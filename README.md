@@ -83,7 +83,8 @@ L’objectif : corriger un maximum de tickets tout en respectant les bonnes prat
 - Restriction CORS aux domaines autorisés.
 - Nettoyage des commentaires (sanitize).
 - Suppression des injections JavaScript possibles.
-![test_xss](https://github.com/user-attachments/assets/99074ce8-4f77-47fc-ae7d-73c94d95c1b0)
+<img width="539" height="632" alt="image" src="https://github.com/user-attachments/assets/5032c087-f4c0-453c-9123-4869d492e816" />
+
 
 ---
 
