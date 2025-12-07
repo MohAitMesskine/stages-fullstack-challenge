@@ -1,98 +1,116 @@
-# 🚀 Challenge Technique - Développeur Full Stack
+# ✅ Résolution des Tickets du Backlog – Stages Fullstack Challenge
 
-Ce challenge simule une situation réelle que vous rencontrerez en entreprise : **rejoindre une équipe et résoudre des problèmes sur une application existante**.
-
-Contrairement aux exercices traditionnels où vous créez une application from scratch, ici vous devez :
-- ✅ Comprendre du code existant
-- 🐛 Identifier et corriger des bugs
-- 🔒 Résoudre des failles de sécurité
-- ⚡ Optimiser les performances
-- 🔧 Mettre à jour des dépendances
-
-**C'est exactement ce que vous ferez 80% du temps en tant que développeur !**
+Ce dépôt contient l’ensemble des correctifs, optimisations et améliorations effectués pour résoudre les tickets du backlog du **Stages Fullstack Challenge**.  
+L’objectif : corriger un maximum de tickets tout en respectant les bonnes pratiques **Laravel, sécurité web, performance et Git workflow**.
 
 ---
 
-## 🎯 Objectif
+## 📊 Résumé Global des Tickets Résolus
 
-Vous recevez une **plateforme de gestion de blog** fonctionnelle (Laravel + React + MySQL) avec plusieurs problèmes à résoudre.
+| Catégorie        | Nombre | Statut | Difficulté |
+|------------------|--------|--------|------------|
+| 🐛 Bugs           | 4      | ✔️ Corrigés | ⭐ à ⭐⭐ |
+| 🔒 Sécurité       | 3      | ✔️ Corrigés | ⭐⭐ à ⭐⭐⭐ |
+| ⚡ Performance    | 3      | ✔️ Corrigés | ⭐⭐ à ⭐⭐⭐ |
 
-**Mission** : Résoudre au moins **70% des tickets** du backlog pour être invité à l'entretien oral.
-
----
-
-## 📁 Structure du challenge
-
-```
-/fullstack-challenge/
-├── README.md                 ← Vous êtes ici
-├── CHALLENGE.md              ← Description détaillée du challenge
-├── TICKETS.md                ← Liste des tickets à résoudre (votre mission)
-└── /project/                 ← Le code source de l'application
-```
+**Total : 10 / 10 tickets résolus**  
+➡️ **100% du backlog corrigé**
 
 ---
 
-## 🚦 Démarrage rapide
+# 🧩 Détails des Résolutions
 
-### 1. Lisez la description complète
-👉 **[Consultez CHALLENGE.md](./CHALLENGE.md)** pour comprendre le contexte et les règles
+## 🐛 1. Bugs
 
-### 2. Consultez les tickets à résoudre
-👉 **[Consultez TICKETS.md](./TICKETS.md)** pour voir la liste des problèmes à corriger
-
-### 3. Forkez le repository (IMPORTANT - à faire en premier !)
-👉 **Forkez** https://github.com/voidagency/stages-fullstack-challenge.git sur votre compte GitHub
-
-Cliquez sur le bouton **"Fork"** en haut à droite du repository GitHub.
-
-### 4. Clonez VOTRE fork et lancez l'application
-
-Suivez les instructions détaillées dans **[CHALLENGE.md](./CHALLENGE.md)** section "Instructions de Travail"
-
-### 5. Résolvez les tickets
-- Créez une branche par ticket (`BUG-001`, `SEC-002`, etc.)
-- Committez régulièrement avec des messages clairs
-- Créez une Pull Request pour chaque ticket résolu
-- Mergez vos PRs dans votre branche `main`
-
-### 6. Soumettez votre travail
-📌 **Livrable** : Lien vers votre fork GitHub avec toutes les PRs mergées
-
-Voir **[CHALLENGE.md](./CHALLENGE.md)** pour les détails du workflow Git
+### **BUG-001 — Recherche insensible aux accents**
+- Problème : la recherche ne reconnaît pas les caractères accentués.
+- Correction : normalisation + collation insensible aux accents (`utf8_general_ci`), `LOWER()` et traitement Laravel.
+- Test : café / cafe • élève / eleve • été / ete.
+![problem1](https://github.com/user-attachments/assets/be45d431-1c36-4b42-b900-2cebce99d022)
 
 ---
 
-## ⏱️ Durée
-
-**Format flexible** : Prenez le temps nécessaire, vous pouvez travailler en plusieurs sessions.
-
-Temps estimé : **8-10 heures** selon votre niveau.
-
----
-
-## 🆘 Besoin d'aide ?
-
-- 📖 Consultez la documentation officielle (Laravel, React, Docker)
-- 🤖 **Vous pouvez utiliser l'IA** (ChatGPT, Copilot, etc.) - voir CHALLENGE.md
-- 🔍 Google, StackOverflow sont vos amis
-
-## 🎓 Technologies utilisées
-
-- **Backend** : PHP 7.4, Laravel 10
-- **Frontend** : React 18, Vite
-- **Base de données** : MySQL 8
-- **Infrastructure** : Docker, Docker Compose
+### **BUG-002 — Suppression du dernier commentaire**
+- Cause : tentative d’accès à un index vide.
+- Correction : ajout d’une vérification `if ($comment)` avant suppression.
+- Test : suppression sur article avec 1 ou plusieurs commentaires.
+![problem2](https://github.com/user-attachments/assets/dd6401da-8d36-439b-851a-42446a3e6698)
 
 ---
 
-## 🤝 Bonne chance !
+### **BUG-003 — Upload > 2MB (HTTP 413)**
+- Limites détectées dans PHP, Laravel, Docker.
+- Correction :
+  - `upload_max_filesize` + `post_max_size`
+  - Configuration Docker/Nginx
+  - Validation Laravel
+- Upload testé jusqu’à 10MB.
+![problem3-validation](https://github.com/user-attachments/assets/32951f43-6140-4e1e-a876-a3297e1c5be5)
 
-Ce challenge teste vos compétences réelles de développeur. Montrez-nous votre capacité à :
-- 🔍 Analyser et comprendre du code existant
-- 🐛 Débugger méthodiquement
-- 🛠️ Proposer des solutions robustes
-- 📝 Communiquer clairement vos choix
+---
 
-**Prêt ? Rendez-vous dans [CHALLENGE.md](./CHALLENGE.md) !** 🚀
+### **BUG-004 — Dates affichées en anglais**
+- Correction :
+  - `config/app.php` → locale=fr, timezone=Europe/Paris
+  - Formatage Carbon
+  - Conversion frontend
+- Test : 12/09/2025 → “12 Septembre 2025”.
+<img width="1209" height="230" alt="image" src="https://github.com/user-attachments/assets/803f3668-1f38-47d0-8c3f-cecbc3f1f149" />
+
+---
+
+## 🔒 2. Sécurité
+
+### **SEC-001 — Mots de passe en clair**
+- Implémentation du `bcrypt()`.
+- Migration pour convertir les anciens mots de passe.
+- Validation du login après hashage.
+![security1](https://github.com/user-attachments/assets/d530ffe2-d424-4a73-a31c-da4e218d6b2b)
+
+---
+
+### **SEC-002 — Injection SQL dans la recherche**
+- Requête SQL concaténée supprimée ❌
+- Remplacement par :
+  - requêtes préparées ✔️
+  - Eloquent sécurisé ✔️
+- Résistance testée : `' OR 1=1 --`, `UNION SELECT…`
+![sql_injection](https://github.com/user-attachments/assets/77d39d26-db81-4a3e-8233-968026629c64)
+
+---
+
+### **SEC-003 — CORS ouvert + XSS dans commentaires**
+- Restriction CORS aux domaines autorisés.
+- Nettoyage des commentaires (sanitize).
+- Suppression des injections JavaScript possibles.
+![test_xss](https://github.com/user-attachments/assets/99074ce8-4f77-47fc-ae7d-73c94d95c1b0)
+
+---
+
+## ⚡ 3. Performance
+
+### **PERF-001 — Problème N+1**
+- Correction : `Article::with(['author', 'comments'])`.
+- Résultat : **101 requêtes → 3 requêtes**.
+![performance ](https://github.com/user-attachments/assets/fd8537aa-051a-4d75-bb47-c338d1a2c25f)
+
+---
+
+### **PERF-002 — Optimisation d’images**
+- Compression automatique backend.
+- Redimensionnement 1200px max.
+- Conversion WebP (bonus).
+![performance](https://github.com/user-attachments/assets/0ffb53b9-b03d-49bf-9f34-3830e57c6dd3)
+
+---
+
+### **PERF-003 — Cache des pages**
+- Mise en place de `Cache::remember()`.
+- Expiration configurable.
+- Résultat : gain de vitesse sur pages très consultées.
+![performanche_cashe](https://github.com/user-attachments/assets/32a1e8ee-e703-40b0-952a-4d42bb4c9074)
+
+---
+
+# 🔧 Workflow Git Utilisé
 
