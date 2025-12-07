@@ -54,6 +54,12 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . /var/www/html
 
+# Ensure Laravel cache directories exist and are writable before Composer scripts run
+RUN mkdir -p /var/www/html/bootstrap/cache \
+    && mkdir -p /var/www/html/storage \
+    && chown -R www-data:www-data /var/www/html/bootstrap/cache /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache /var/www/html/storage
+
 # Install composer dependencies if composer.json exists
 RUN if [ -f composer.json ]; then \
         composer install --no-dev --optimize-autoloader --no-interaction; \

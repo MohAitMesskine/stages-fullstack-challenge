@@ -4,7 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Laravel\Facades\Image; // Intervention Image v3 (Laravel package)
+use Intervention\Image\Facades\Image; // Intervention Image v2 facade
 
 class ImageOptimizationService
 {
@@ -27,14 +27,14 @@ class ImageOptimizationService
 
         $results = [];
         foreach ($sizes as $label => $width) {
-            // Create JPEG variant
+            // JPEG variant
             $jpegPath = "articles/{$baseName}_{$label}.jpg";
-            $this->saveResized($file, $width, 80, $jpegPath, 'jpg');
+            $this->saveResizedV2($file, $width, 80, $jpegPath, 'jpg');
             $results[$label] = $jpegPath;
 
-            // Create WebP variant
+            // WebP variant (if supported)
             $webpPath = "articles/{$baseName}_{$label}.webp";
-            $this->saveResized($file, $width, 80, $webpPath, 'webp');
+            $this->saveResizedV2($file, $width, 80, $webpPath, 'webp');
             $results[$label . '_webp'] = $webpPath;
         }
 
@@ -46,16 +46,16 @@ class ImageOptimizationService
         return $results;
     }
 
-    private function saveResized(UploadedFile $file, int $width, int $quality, string $path, string $format): void
+    private function saveResizedV2(UploadedFile $file, int $width, int $quality, string $path, string $format): void
     {
-        $img = Image::read($file->getPathname());
-        $img = $img->scale(width: $width);
-        $encoded = match ($format) {
-            'webp' => $img->toWebp($quality),
-            'jpg', 'jpeg' => $img->toJpeg($quality),
-            'png' => $img->toPng(),
-            default => $img->toJpeg($quality),
-        };
-        Storage::disk('public')->put($path, $encoded);
+        $img = Image::make($file->getPathname())
+            ->resize($width, null, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
+        $encoded = $format === 'webp'
+            ? $img->encode('webp', $quality)
+            : $img->encode('jpg', $quality);
+        Storage::disk('public')->put($path, (string) $encoded);
     }
 }

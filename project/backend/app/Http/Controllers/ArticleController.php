@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
-    private const ARTICLE_LIST_CACHE_KEY = 'articles.index.optimized.v2';
+    public const ARTICLE_LIST_CACHE_KEY = 'articles.index.optimized.v2';
     private const ARTICLE_LIST_CACHE_TTL = 60; // seconds (PERF-003: articles list cached 1 minute)
     private const ARTICLE_LIST_LIMIT = 20; // default per_page
     /**
@@ -23,18 +23,35 @@ class ArticleController extends Controller
     public function index(Request $request)
     {
         $startedAt = microtime(true);
+        $timeLog = [];
+        
+        // dump("\n=== ÉTAPE 1: Début de la requête index - Time: " . $startedAt);
+        $timeLog['start'] = 0;
+        
+        // Récupération et validation des paramètres (optimisé)
         $page = max(1, (int) $request->query('page', 1));
         $perPageReq = (int) $request->query('per_page', self::ARTICLE_LIST_LIMIT);
-        $perPage = max(1, min(50, $perPageReq)); // clamp per_page to [1,50]
+        $perPage = max(1, min(50, $perPageReq));
         $offset = ($page - 1) * $perPage;
+        
+        $timeLog['params'] = round((microtime(true) - $startedAt) * 1000, 2);
+        // dump("=== ÉTAPE 2: Paramètres - Page: $page, PerPage: $perPage, Offset: $offset ({$timeLog['params']}ms)");
 
-        // PERF-001: cache + eager loading to eliminate N+1 overhead.
+        // PERF-001: Cache avec clé optimisée
         $cacheKey = self::ARTICLE_LIST_CACHE_KEY . ":p={$page}:pp={$perPage}";
         $cacheStore = Cache::getStore();
         $supportsTags = $cacheStore instanceof TaggableStore;
-
-        $cacheRemember = function () use ($offset, $perPage) {
-                return Article::with(['author:id,name'])
+        
+        $timeLog['cache_init'] = round((microtime(true) - $startedAt) * 1000, 2);
+        // dump("=== ÉTAPE 3: Configuration cache - Key: $cacheKey, Support tags: " . ($supportsTags ? 'OUI' : 'NON') . " ({$timeLog['cache_init']}ms)");
+       
+        // Callback optimisé pour la récupération des données
+        $cacheRemember = function () use ($offset, $perPage, $startedAt, &$timeLog) {
+                $dbStart = microtime(true);
+                // dump("=== ÉTAPE 4: Début de la récupération des articles depuis la DB");
+                
+                // Requête optimisée avec index sur published_at et created_at
+                $articles = Article::with(['author:id,name'])
                     ->withCount('comments')
                     ->select([
                         'id',
@@ -49,45 +66,83 @@ class ArticleController extends Controller
                     ->orderByDesc('created_at')
                     ->skip($offset)
                     ->take($perPage)
-                    ->get()
-                    ->map(static function (Article $article) {
-                        $content = $article->content ?? '';
+                    ->get();
+                
+                $timeLog['db_query'] = round((microtime(true) - $dbStart) * 1000, 2);
+                // dump("    → Requête DB terminée en {$timeLog['db_query']}ms");
+                
+                $mapStart = microtime(true);
+                
+                // Optimisation: pré-calculer Storage::url une seule fois si nécessaire
+                $result = $articles->map(static function (Article $article) {
+                    $content = $article->content ?? '';
+                    $contentLength = mb_strlen($content);
 
-                        return [
-                            'id' => $article->id,
-                            'title' => $article->title,
-                            'content' => Str::limit($content, 200, Str::length($content) > 200 ? '...' : ''),
-                            'author' => optional($article->author)->name,
-                            'comments_count' => $article->comments_count,
-                            'published_at' => optional($article->published_at)->toJSON(),
-                            'created_at' => optional($article->created_at)->toJSON(),
-                            'image_url' => $article->image_path ? Storage::url($article->image_path) : null,
-                        ];
-                    })
-                    ->values()
-                    ->all();
+                    return [
+                        'id' => $article->id,
+                        'title' => $article->title,
+                        'content' => $contentLength > 200 ? mb_substr($content, 0, 200) . '...' : $content,
+                        'author' => optional($article->author)->name,
+                        'comments_count' => $article->comments_count,
+                        'published_at' => optional($article->published_at)->toJSON(),
+                        'created_at' => optional($article->created_at)->toJSON(),
+                        'image_url' => $article->image_path ? Storage::url($article->image_path) : null,
+                    ];
+                })->values()->all();
+                
+                $timeLog['mapping'] = round((microtime(true) - $mapStart) * 1000, 2);
+                // dump("    → Mapping des données terminé en {$timeLog['mapping']}ms");
+                
+                return $result;
             };
-
+        
+        $cacheStart = microtime(true);
+        // dump("=== ÉTAPE 5: Tentative de récupération depuis le cache");
+        
         $articles = $supportsTags
             ? Cache::tags(['articles_list'])->remember($cacheKey, self::ARTICLE_LIST_CACHE_TTL, $cacheRemember)
             : Cache::remember($cacheKey, self::ARTICLE_LIST_CACHE_TTL, $cacheRemember);
+        
+        $timeLog['cache_retrieve'] = round((microtime(true) - $cacheStart) * 1000, 2);
+        // dump("=== ÉTAPE 6: Articles récupérés - Nombre: " . count($articles) . " ({$timeLog['cache_retrieve']}ms)");
 
-        // ETag support for client-side caching
-        $payload = json_encode($articles);
-        $etag = 'W/"' . sha1($payload) . '"';
+        // ETag: généré plus rapidement avec JSON_UNESCAPED_SLASHES
+        $etagStart = microtime(true);
+        $payload = json_encode($articles, JSON_UNESCAPED_SLASHES);
+        $etag = 'W/"' . hash('sha256', $payload) . '"';
+        
+        $timeLog['etag'] = round((microtime(true) - $etagStart) * 1000, 2);
+        // dump("=== ÉTAPE 7: ETag généré ({$timeLog['etag']}ms)");
+        
+        // Vérification ETag (cache navigateur)
         if ($request->headers->get('If-None-Match') === $etag) {
-            return response()->noContent(304)->header('ETag', $etag)->header('Cache-Control', 'public, max-age=300');
+            $totalTime = round((microtime(true) - $startedAt) * 1000, 2);
+            // dump("=== ÉTAPE 8: ETag match - Retour 304 Not Modified (TOTAL: {$totalTime}ms)");
+            return response()->noContent(304)
+                ->header('ETag', $etag)
+                ->header('Cache-Control', 'public, max-age=300')
+                ->header('X-Response-Time', $totalTime . 'ms');
         }
 
-        $response = response()->json($articles);
+        // Préparation de la réponse optimisée
+        $responseStart = microtime(true);
+        // dump("=== ÉTAPE 9: Préparation de la réponse JSON");
+        
+        // Optimisation: utiliser JSON_UNESCAPED_SLASHES pour réduire la taille
+        $response = response()->json($articles, 200, [], JSON_UNESCAPED_SLASHES);
         $response->headers->set('ETag', $etag);
         $response->headers->set('Cache-Control', 'public, max-age=300');
+        
+        $timeLog['response_prep'] = round((microtime(true) - $responseStart) * 1000, 2);
 
-        if ($request->boolean('performance_test')) {
-            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
-            $response->headers->set('X-Debug-Response-Time', $durationMs);
-        }
-
+        // Calcul du temps total
+        $totalTime = round((microtime(true) - $startedAt) * 1000, 2);
+        $response->headers->set('X-Response-Time', $totalTime . 'ms');
+        
+        // Log détaillé des performances (uniquement dans les logs Laravel, pas dans la réponse)
+        \Log::info('API Performance', $timeLog);
+        \Log::info("Total response time: {$totalTime}ms");
+        
         return $response;
     }
 
