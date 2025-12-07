@@ -100,7 +100,8 @@ L’objectif : corriger un maximum de tickets tout en respectant les bonnes prat
 - Compression automatique backend.
 - Redimensionnement 1200px max.
 - Conversion WebP (bonus).
-![performance](https://github.com/user-attachments/assets/0ffb53b9-b03d-49bf-9f34-3830e57c6dd3)
+
+<img width="1222" height="478" alt="image" src="https://github.com/user-attachments/assets/f5d09ee8-fffb-4218-aaff-2cb59863100c" />
 
 ---
 
