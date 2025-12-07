@@ -17,8 +17,10 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next)
     {
-        // Détecter les tentatives d'injection SQL dans les paramètres de requête
-        $this->detectSqlInjectionAttempts($request);
+        // Détection SQL injection seulement pour les routes sensibles (optimisation performance)
+        if ($request->is('api/articles/search') || $request->method() === 'POST' || $request->method() === 'PUT') {
+            $this->detectSqlInjectionAttempts($request);
+        }
 
         $response = $next($request);
 
