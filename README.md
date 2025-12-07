@@ -111,7 +111,8 @@ L’objectif : corriger un maximum de tickets tout en respectant les bonnes prat
 - Mise en place de `Cache::remember()`.
 - Expiration configurable.
 - Résultat : gain de vitesse sur pages très consultées.
-![performanche_cashe](https://github.com/user-attachments/assets/32a1e8ee-e703-40b0-952a-4d42bb4c9074)
+<img width="608" height="484" alt="image" src="https://github.com/user-attachments/assets/ae8b7f65-2e5e-4ba3-922d-ae9f17ed2e6b" />
+
 
 ---
 
