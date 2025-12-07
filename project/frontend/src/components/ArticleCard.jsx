@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import OptimizedImage from './OptimizedImage';
 import CommentList from './CommentList';
 
 function ArticleCard({ article, onDelete }) {
@@ -9,19 +10,47 @@ function ArticleCard({ article, onDelete }) {
     
     const date = new Date(dateString);
     
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Los_Angeles'
+      timeZone: 'Europe/Paris'
     });
   };
 
   return (
     <div className="card">
+      {article.images && (article.images.medium || article.image_url) && (
+        (() => {
+          const jpgMedium = article.images?.medium || article.image_url;
+          const jpgLarge = article.images?.large || article.image_url;
+          const webp = article.images?.medium_webp || null;
+          const imgWidth = 600;
+          const imgHeight = 400; // approximate aspect for layout stability
+          return (
+            <picture>
+              {webp && <source srcSet={webp} type="image/webp" />}
+              <img
+                src={jpgMedium}
+                srcSet={`${jpgMedium} 600w, ${jpgLarge} 1200w`}
+                sizes="(max-width: 768px) 600px, 1200px"
+                alt={article.title}
+                className="article-image"
+                loading="lazy"
+                width={imgWidth}
+                height={imgHeight}
+                style={{ width: '100%', height: 'auto', marginBottom: '0.75rem', borderRadius: '6px' }}
+              />
+            </picture>
+          );
+        })()
+      )}
       <h3>{article.title}</h3>
+      {article.images && (
+        <OptimizedImage images={article.images} size="medium" alt={article.title} />
+      )}
       <div style={{ color: '#7f8c8d', fontSize: '0.9em', marginBottom: '0.5rem' }}>
         Par {article.author} • {formatDate(article.created_at)}
       </div>
