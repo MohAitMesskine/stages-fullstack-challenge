@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
-    public const ARTICLE_LIST_CACHE_KEY = 'articles.index.optimized.v2';
+    public const ARTICLE_LIST_CACHE_KEY = 'articles.index.optimized.v3';
     private const ARTICLE_LIST_CACHE_TTL = 60; // seconds (PERF-003: articles list cached 1 minute)
     private const ARTICLE_LIST_LIMIT = 20; // default per_page
     /**
