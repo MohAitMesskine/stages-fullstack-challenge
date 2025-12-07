@@ -75,7 +75,8 @@ L’objectif : corriger un maximum de tickets tout en respectant les bonnes prat
   - requêtes préparées ✔️
   - Eloquent sécurisé ✔️
 - Résistance testée : `' OR 1=1 --`, `UNION SELECT…`
-![sql_injection](https://github.com/user-attachments/assets/77d39d26-db81-4a3e-8233-968026629c64)
+<img width="722" height="471" alt="image" src="https://github.com/user-attachments/assets/78e23f0b-cafd-4732-9187-284d707d59f3" />
+
 
 ---
 
