@@ -17,8 +17,10 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next)
     {
-        // Détecter les tentatives d'injection SQL dans les paramètres de requête
-        $this->detectSqlInjectionAttempts($request);
+        // Détection SQL injection seulement pour les routes sensibles (optimisation performance)
+        if ($request->is('api/articles/search') || $request->method() === 'POST' || $request->method() === 'PUT') {
+            $this->detectSqlInjectionAttempts($request);
+        }
 
         $response = $next($request);
 
@@ -27,6 +29,9 @@ class SecurityHeaders
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        
+        // Content Security Policy pour prévenir XSS
+        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;");
         
         return $response;
     }
