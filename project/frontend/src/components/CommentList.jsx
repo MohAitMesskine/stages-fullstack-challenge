@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getComments, createComment, deleteComment } from '../services/api';
 
-function CommentList({ articleId }) {
+function CommentList({ articleId, onCommentsLoaded }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
@@ -14,6 +14,10 @@ function CommentList({ articleId }) {
     try {
       const response = await getComments(articleId);
       setComments(response.data);
+      // Mettre à jour le nombre de commentaires dans le parent
+      if (onCommentsLoaded) {
+        onCommentsLoaded(response.data.length);
+      }
     } catch (error) {
       console.error('Error fetching comments:', error);
     } finally {

@@ -1,9 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import OptimizedImage from './OptimizedImage';
 import CommentList from './CommentList';
+import { getComments } from '../services/api';
 
 function ArticleCard({ article, onDelete }) {
   const [showComments, setShowComments] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(article.comments_count || 0);
+
+  // Charger le nombre de commentaires au montage du composant
+  useEffect(() => {
+    const fetchCommentsCount = async () => {
+      try {
+        const response = await getComments(article.id);
+        setCommentsCount(response.data.length);
+      } catch (error) {
+        console.error('Error fetching comments count:', error);
+      }
+    };
+    
+    fetchCommentsCount();
+  }, [article.id]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -61,7 +77,7 @@ function ArticleCard({ article, onDelete }) {
           onClick={() => setShowComments(!showComments)}
           style={{ fontSize: '0.9em' }}
         >
-          {showComments ? 'Masquer' : 'Afficher'} commentaires ({article.comments_count || 0})
+          {showComments ? 'Masquer' : 'Afficher'} commentaires ({commentsCount})
         </button>
         
         {onDelete && (
@@ -79,7 +95,7 @@ function ArticleCard({ article, onDelete }) {
 
       {showComments && (
         <div style={{ marginTop: '1rem', borderTop: '1px solid #ecf0f1', paddingTop: '1rem' }}>
-          <CommentList articleId={article.id} />
+          <CommentList articleId={article.id} onCommentsLoaded={setCommentsCount} />
         </div>
       )}
     </div>
