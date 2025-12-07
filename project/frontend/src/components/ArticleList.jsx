@@ -7,13 +7,13 @@ function ArticleList({ searchQuery }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadTime, setLoadTime] = useState(null);
-  const [showPerformanceTest, setShowPerformanceTest] = useState(false);
+  const showPerformanceTest = false; // mode test désactivé par défaut
 
   useEffect(() => {
-    fetchArticles(showPerformanceTest);
-  }, [searchQuery, showPerformanceTest]);
+    fetchArticles(false);
+  }, [searchQuery]);
 
-  const fetchArticles = async (withPerformanceTest = false) => {
+  const fetchArticles = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -22,8 +22,9 @@ function ArticleList({ searchQuery }) {
       let response;
       if (searchQuery && searchQuery.trim() !== '') {
         response = await searchArticles(searchQuery);
+        console.log("data are : ",response)
       } else {
-        response = await getArticles(withPerformanceTest);
+        response = await getArticles();
       }
       
       const endTime = performance.now();
@@ -78,43 +79,8 @@ function ArticleList({ searchQuery }) {
               ⏱️ {loadTime}ms
             </span>
           )}
-          <button 
-            onClick={() => setShowPerformanceTest(!showPerformanceTest)}
-            style={{ 
-              fontSize: '0.85em',
-              padding: '0.5em 1em',
-              backgroundColor: showPerformanceTest ? '#e67e22' : '#95a5a6'
-            }}
-          >
-            {showPerformanceTest ? '⚠️ Mode Performance Test' : '🧪 Tester Performance'}
-          </button>
         </div>
       </div>
-
-      {showPerformanceTest && (
-        <div style={{
-          padding: '1rem',
-          backgroundColor: '#fff3cd',
-          borderRadius: '4px',
-          marginBottom: '1rem',
-          fontSize: '0.9em'
-        }}>
-          <strong>🐛 Test de performance (PERF-001) - MODE ACTIF</strong>
-          <div style={{ marginTop: '0.5rem' }}>
-            ⚠️ Un délai artificiel de 30ms par article simule le coût du problème N+1<br/>
-            • Ouvrez la console navigateur (F12) → onglet Network<br/>
-            • Ouvrez les logs Docker : <code>docker logs blog_backend -f</code><br/>
-            • Observez le nombre de requêtes SQL (~101 requêtes pour 50 articles au lieu d'1)<br/>
-            • Avec 50 articles × 30ms = ~1,5 seconde de chargement
-          </div>
-          {loadTime && (
-            <div style={{ marginTop: '0.5rem', color: '#856404' }}>
-              ⏱️ Temps de chargement : <strong>{loadTime}ms</strong> 
-              {parseInt(loadTime) > 1000 ? ' 🚨 TRÈS LENT!' : parseInt(loadTime) > 500 ? ' ⚠️ LENT!' : ''}
-            </div>
-          )}
-        </div>
-      )}
 
       <div>
         {articles.map(article => (

@@ -17,6 +17,8 @@ export const getArticles = (performanceTest = false) => {
 };
 export const getArticle = (id) => api.get(`/articles/${id}`);
 export const searchArticles = (query) => api.get('/articles/search', { params: { q: query } });
+
+   
 export const createArticle = (data) => api.post('/articles', data);
 export const updateArticle = (id, data) => api.put(`/articles/${id}`, data);
 export const deleteArticle = (id) => api.delete(`/articles/${id}`);

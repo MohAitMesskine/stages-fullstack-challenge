@@ -24,6 +24,8 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
 });
 
+
+
 // Authentication routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
